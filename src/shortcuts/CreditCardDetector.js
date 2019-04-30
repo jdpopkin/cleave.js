@@ -15,9 +15,33 @@ var CreditCardDetector = {
         visa:          [4, 4, 4, 4],
         mir:           [4, 4, 4, 4],
         unionPay:      [4, 4, 4, 4],
-        general:       [4, 4, 4, 4],
-        generalStrict: [4, 4, 4, 7]
+        general:       [4, 4, 4, 4]
     },
+
+	get strictBlocks() {
+		delete this.strictBlocks;
+
+		// Iterate over this.blocks
+		// For each key, sum lengths, then increase final block so total is 19
+		var strictBlocks = {};
+
+		for (var blockName in this.blocks) {
+			var newBlock = this.blocks[blockName].slice(0);
+
+			var sumBeforeLast = 0;
+			for (var i = 0; i < newBlock.length - 1; i++) {
+				sumBeforeLast += newBlock[i];
+			}
+			// Expand the last block so the total length is 19.
+			var lastValue = 19 - sumBeforeLast;
+			newBlock[newBlock.length - 1] = lastValue;
+
+			strictBlocks[blockName] = newBlock;
+		}
+
+		this.strictBlocks = strictBlocks;
+		return this.strictBlocks;
+	}
 
     re: {
         // starts with 1; 15 digits, not starts with 1800 (jcb card)
@@ -62,7 +86,8 @@ var CreditCardDetector = {
 
     getInfo: function (value, strictMode) {
         var blocks = CreditCardDetector.blocks,
-            re = CreditCardDetector.re;
+            re = CreditCardDetector.re,
+			strictBlocks = CreditCardDetector.strictBlocks;
 
         // Some credit card can have up to 19 digits number.
         // Set strictMode to true will remove the 16 max-length restrain,
@@ -75,7 +100,7 @@ var CreditCardDetector = {
                 var block;
 
                 if (strictMode) {
-                    block = blocks.generalStrict;
+					block = strictBlocks[key];
                 } else {
                     block = blocks[key];
                 }
@@ -89,7 +114,7 @@ var CreditCardDetector = {
 
         return {
             type:   'unknown',
-            blocks: strictMode ? blocks.generalStrict : blocks.general
+            blocks: strictMode ? strictBlocks.general : blocks.general
         };
     }
 };
